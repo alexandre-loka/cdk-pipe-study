@@ -1,13 +1,13 @@
 import { Stack, StackProps, Stage, StageProps, Tags } from "aws-cdk-lib";
 import { CodePipeline, CodePipelineSource, ShellStep } from "aws-cdk-lib/pipelines";
 import { Construct } from "constructs";
-import { CHANGE_ME_Stack } from "../stack";
+import { InfraBase } from "../stack";
 
 export class PipelineStage extends Stage {
   constructor(scope: Construct, id: string, props?: StageProps) {
     super(scope, id, props);
 
-    new CHANGE_ME_Stack(this, "StageStack", {});
+    new InfraBase(this, "StageStack", {});
   }
 }
 

@@ -1,13 +1,23 @@
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
-import { CHANGE_ME_Stack } from "../src/stack";
+import { InfraBase } from "../src/stack";
 import { CodePipelineStack } from "../src/pipeline/codepipeline";
+import { FrontEndPipeline } from "../src/fe-pipe";
 
 // Test for single stack
-test("snapshot for CHANGE_ME_Stack matches previous state", () => {
+test("snapshot for InfraBase matches previous state", () => {
   const app = new cdk.App();
-  const stack = new CHANGE_ME_Stack(app, "MyTestStack");
+  const stack = new InfraBase(app, "MyTestStack");
+
+  const template = Template.fromStack(stack);
+  expect(template.toJSON()).toMatchSnapshot();
+});
+
+// Test for FrpntEndPipeline stack
+test("snapshot for FrontEndPipeline matches previous state", () => {
+  const app = new cdk.App();
+  const stack = new FrontEndPipeline(app, "MyTestStack");
 
   const template = Template.fromStack(stack);
   expect(template.toJSON()).toMatchSnapshot();
