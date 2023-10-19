@@ -2757,80 +2757,6 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
       },
       "Type": "AWS::Route53::RecordSet",
     },
-    "BucketKey7092080A": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "KeyPolicy": {
-          "Statement": [
-            {
-              "Action": "kms:*",
-              "Effect": "Allow",
-              "Principal": {
-                "AWS": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Ref": "AWS::Partition",
-                      },
-                      ":iam::",
-                      {
-                        "Ref": "AWS::AccountId",
-                      },
-                      ":root",
-                    ],
-                  ],
-                },
-              },
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "kms:Decrypt",
-                "kms:DescribeKey",
-              ],
-              "Effect": "Allow",
-              "Principal": {
-                "CanonicalUser": {
-                  "Fn::GetAtt": [
-                    "OriginAccessIdentityDF1E3CAC",
-                    "S3CanonicalUserId",
-                  ],
-                },
-              },
-              "Resource": "*",
-            },
-            {
-              "Action": "kms:Decrypt",
-              "Effect": "Allow",
-              "Principal": {
-                "CanonicalUser": {
-                  "Fn::GetAtt": [
-                    "OriginAccessIdentityDF1E3CAC",
-                    "S3CanonicalUserId",
-                  ],
-                },
-              },
-              "Resource": "*",
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "Tags": [
-          {
-            "Key": "Project",
-            "Value": "Study project",
-          },
-          {
-            "Key": "Team",
-            "Value": "Alexandre Ramos",
-          },
-        ],
-      },
-      "Type": "AWS::KMS::Key",
-      "UpdateReplacePolicy": "Delete",
-    },
     "Certificate4E7ABB08": {
       "Properties": {
         "DomainName": "coelhor.dev",
@@ -2875,14 +2801,6 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
       },
       "Type": "AWS::SSM::Parameter",
     },
-    "OriginAccessIdentityDF1E3CAC": {
-      "Properties": {
-        "CloudFrontOriginAccessIdentityConfig": {
-          "Comment": "Allows CloudFront to reach the bucket",
-        },
-      },
-      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
-    },
     "Repository22E53BBD": {
       "Properties": {
         "RepositoryName": "app.coelhor.dev",
@@ -2917,29 +2835,26 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
           "IPV6Enabled": true,
           "Origins": [
             {
-              "CustomOriginConfig": {
-                "OriginProtocolPolicy": "http-only",
-                "OriginSSLProtocols": [
-                  "TLSv1.2",
-                ],
-              },
               "DomainName": {
-                "Fn::Select": [
-                  2,
-                  {
-                    "Fn::Split": [
-                      "/",
-                      {
-                        "Fn::GetAtt": [
-                          "s3Bucket6575F0A6",
-                          "WebsiteURL",
-                        ],
-                      },
-                    ],
-                  },
+                "Fn::GetAtt": [
+                  "s3Bucket6575F0A6",
+                  "RegionalDomainName",
                 ],
               },
               "Id": "MyTestStackcdnAppDistribuitionOrigin1D4790F72",
+              "S3OriginConfig": {
+                "OriginAccessIdentity": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "origin-access-identity/cloudfront/",
+                      {
+                        "Ref": "cdnAppDistribuitionOrigin1S3Origin526E8C62",
+                      },
+                    ],
+                  ],
+                },
+              },
             },
           ],
           "ViewerCertificate": {
@@ -2963,24 +2878,17 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
       },
       "Type": "AWS::CloudFront::Distribution",
     },
+    "cdnAppDistribuitionOrigin1S3Origin526E8C62": {
+      "Properties": {
+        "CloudFrontOriginAccessIdentityConfig": {
+          "Comment": "Identity for MyTestStackcdnAppDistribuitionOrigin1D4790F72",
+        },
+      },
+      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+    },
     "s3Bucket6575F0A6": {
       "DeletionPolicy": "Delete",
       "Properties": {
-        "BucketEncryption": {
-          "ServerSideEncryptionConfiguration": [
-            {
-              "ServerSideEncryptionByDefault": {
-                "KMSMasterKeyID": {
-                  "Fn::GetAtt": [
-                    "BucketKey7092080A",
-                    "Arn",
-                  ],
-                },
-                "SSEAlgorithm": "aws:kms",
-              },
-            },
-          ],
-        },
         "BucketName": "app.coelhor.dev",
         "Tags": [
           {
@@ -2992,10 +2900,6 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
             "Value": "Alexandre Ramos",
           },
         ],
-        "WebsiteConfiguration": {
-          "ErrorDocument": "index.html",
-          "IndexDocument": "index.html",
-        },
       },
       "Type": "AWS::S3::Bucket",
       "UpdateReplacePolicy": "Delete",
@@ -3008,42 +2912,30 @@ exports[`snapshot for InfraBase matches previous state 1`] = `
         "PolicyDocument": {
           "Statement": [
             {
-              "Action": [
-                "s3:GetObject*",
-                "s3:GetBucket*",
-                "s3:List*",
-              ],
+              "Action": "s3:GetObject",
               "Effect": "Allow",
               "Principal": {
                 "CanonicalUser": {
                   "Fn::GetAtt": [
-                    "OriginAccessIdentityDF1E3CAC",
+                    "cdnAppDistribuitionOrigin1S3Origin526E8C62",
                     "S3CanonicalUserId",
                   ],
                 },
               },
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "s3Bucket6575F0A6",
-                    "Arn",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "s3Bucket6575F0A6",
+                        "Arn",
+                      ],
+                    },
+                    "/*",
                   ],
-                },
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      {
-                        "Fn::GetAtt": [
-                          "s3Bucket6575F0A6",
-                          "Arn",
-                        ],
-                      },
-                      "/*",
-                    ],
-                  ],
-                },
-              ],
+                ],
+              },
             },
           ],
           "Version": "2012-10-17",
