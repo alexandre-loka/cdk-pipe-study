@@ -6,7 +6,6 @@ import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import * as cpactions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as iam from "aws-cdk-lib/aws-iam";
 
 export class FrontEndPipeline extends Stack {
@@ -14,7 +13,7 @@ export class FrontEndPipeline extends Stack {
     super(scope, id, props);
     cdk.RemovalPolicy.DESTROY;
 
-    const repo = codecommit.Repository.fromRepositoryName(this, "Repository", "app.coelhor.dev");
+    const repo = new codecommit.Repository(this, "Repository", { repositoryName: "app.coelhor.dev" });
     const sourceArtifact = new codepipeline.Artifact("SourceInput");
     const outputArtifact = new codepipeline.Artifact("BuildOutput");
     const sourceAction = new cpactions.CodeCommitSourceAction({
@@ -54,18 +53,11 @@ export class FrontEndPipeline extends Stack {
     });
 
     const deployAction = new cpactions.S3DeployAction({
-      bucket: s3.Bucket.fromBucketName(this, "Bucket", "app.coelhor.dev"),
+      bucket: s3.Bucket.fromBucketArn(this, "Bucket", "arn:aws:s3:::app.coelhor.dev"),
       actionName: "Deploy",
       input: outputArtifact,
       runOrder: 1,
     });
-
-    const distributionAppId = ssm.StringParameter.fromStringParameterName(
-      this,
-      "CloudFrontId",
-      "/cloudfront/distributionApp-id",
-    ).stringValue;
-    const distributionArn = `arn:aws:cloudfront::${this.account}:distribution/${distributionAppId}`;
 
     //Create cloudformation invalidation
     const invalidateCFProject = new codebuild.PipelineProject(this, `InvalidateProject`, {
@@ -74,6 +66,7 @@ export class FrontEndPipeline extends Stack {
         phases: {
           build: {
             commands: [
+              'OUT=$(aws sts assume-role --role-arn arn:aws:iam::239828624774:role/CloudFrontRole --role-session-name AWSCLI); export AWS_ACCESS_KEY_ID=$(echo $OUT | jq -r ".Credentials"".AccessKeyId"); export AWS_SECRET_ACCESS_KEY=$(echo $OUT | jq -r ".Credentials"".SecretAccessKey"); export AWS_SESSION_TOKEN=$(echo $OUT | jq -r ".Credentials"".SessionToken");',
               'aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_ID} --paths "/*"',
               // Choose whatever files or paths you'd like, or all files as specified here
             ],
@@ -81,14 +74,14 @@ export class FrontEndPipeline extends Stack {
         },
       }),
       environmentVariables: {
-        CLOUDFRONT_ID: { value: distributionAppId },
+        CLOUDFRONT_ID: { value: "E1RPVVGVY21D32" },
       },
     });
 
     invalidateCFProject.addToRolePolicy(
       new iam.PolicyStatement({
-        resources: [distributionArn],
-        actions: ["cloudfront:CreateInvalidation"],
+        actions: ["sts:AssumeRole"],
+        resources: ["arn:aws:iam::239828624774:role/CloudFrontRole"],
       }),
     );
 
@@ -98,7 +91,7 @@ export class FrontEndPipeline extends Stack {
       input: outputArtifact,
       runOrder: 2,
       environmentVariables: {
-        CLOUDFRONT_ID: { value: distributionAppId },
+        CLOUDFRONT_ID: { value: "E1RPVVGVY21D32" },
       },
     });
 

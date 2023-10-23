@@ -9,8 +9,8 @@ import * as config from "./config";
 const app = new cdk.App();
 
 // Direct deployment
-new InfraBase(app, "InfraBase", config.myConfig);
-new FrontEndPipeline(app, "FrontEndPipeline", config.myConfig);
+new InfraBase(app, "InfraBase", config.mainConfig);
+new FrontEndPipeline(app, "FrontEndPipeline", config.devConfig);
 
 // Pipeline deployment
 // new CodePipelineStack(app, "CodePipelineStack", {});

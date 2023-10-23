@@ -8,16 +8,12 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
-import * as codecommit from "aws-cdk-lib/aws-codecommit";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class InfraBase extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
     cdk.RemovalPolicy.DESTROY;
-
-    new codecommit.Repository(this, "Repository", {
-      repositoryName: "app.coelhor.dev",
-    });
 
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, "HostedZone", {
       hostedZoneId: "Z0595012323F7RI1KVDD2",
@@ -34,7 +30,10 @@ export class InfraBase extends Stack {
     const s3Bucket = new s3.Bucket(this, "s3Bucket", {
       bucketName: "app.coelhor.dev",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
+
+    s3Bucket.grantReadWrite(new iam.AccountPrincipal("417546237235"));
 
     const cdnDistribution = new cloudfront.Distribution(this, "cdnAppDistribuition", {
       defaultRootObject: "index.html",
@@ -46,10 +45,20 @@ export class InfraBase extends Stack {
       certificate: cert,
     });
 
-    new ssm.StringParameter(this, "DistribuitionAppID", {
+    new iam.Role(this, "Role", {
+      assumedBy: new iam.AccountPrincipal("417546237235"),
+      roleName: "CloudFrontRole",
+      managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("CloudFrontFullAccess")],
+    });
+
+    cdnDistribution.grantCreateInvalidation(new iam.AccountPrincipal("417546237235"));
+
+    const distribuitionAppID = new ssm.StringParameter(this, "DistribuitionAppID", {
       parameterName: `/cloudfront/distributionApp-id`,
       stringValue: cdnDistribution.distributionId,
     });
+
+    distribuitionAppID.grantRead(new iam.AccountPrincipal("417546237235"));
 
     new route53.ARecord(this, "AliasRecord", {
       zone: hostedZone,
