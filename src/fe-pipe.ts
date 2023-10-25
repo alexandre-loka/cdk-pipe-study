@@ -13,7 +13,7 @@ export class FrontEndPipeline extends Stack {
     super(scope, id, props);
     cdk.RemovalPolicy.DESTROY;
 
-    const repo = new codecommit.Repository(this, "Repository", { repositoryName: "app.coelhor.dev" });
+    const repo = codecommit.Repository.fromRepositoryName(this, "Repository", "app.coelhor.dev");
     const sourceArtifact = new codepipeline.Artifact("SourceInput");
     const outputArtifact = new codepipeline.Artifact("BuildOutput");
     const sourceAction = new cpactions.CodeCommitSourceAction({
@@ -96,6 +96,7 @@ export class FrontEndPipeline extends Stack {
     });
 
     new codepipeline.Pipeline(this, "Pipeline", {
+      pipelineName: "FrontEndPipeline",
       stages: [
         {
           stageName: "Source",
